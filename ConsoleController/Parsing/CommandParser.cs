@@ -14,7 +14,7 @@ namespace ConsoleController.Parsing
 
         public string ParseCommand(string command)
         {
-            var splitCommand = command.Split(' '); 
+            var splitCommand = command.Split(' ').Where(s => s != ""); 
             if (_commands.TryGetValue(splitCommand.First().ToLower(), out var consoleCommand))
             {
                 return consoleCommand.Parse(splitCommand.Skip(1).ToList());

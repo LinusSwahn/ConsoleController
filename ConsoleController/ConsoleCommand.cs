@@ -1,15 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using ConsoleController.Parsing;
 
 namespace ConsoleController
 {
     public abstract class ConsoleCommand : IConsoleCommand
     {
+        private ITypeParsingHelper _parsingHelper;
+        
         private Dictionary<string, MethodInfo> _methods;
 
-        protected ConsoleCommand()
+        protected ConsoleCommand(ITypeParsingHelper parsingHelper)
         {
+            _parsingHelper = parsingHelper;
+            
             _methods = GetType()
                 .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 .ToDictionary(m => m.Name.ToLower());
@@ -24,7 +29,22 @@ namespace ConsoleController
 
             if (_methods.TryGetValue(command.First().ToLower(), out var method))
             {
-                return method.Invoke(this, new[] {command.Skip(1).ToArray()}) as string;
+                var methodParameters = method.GetParameters();
+                var inputParameters = command.Skip(1).ToArray();
+
+                if (methodParameters.Length != inputParameters.Length)
+                {
+                    return Help();
+                }
+
+                var parameters = new object[methodParameters.Length];
+                
+                for (int i = 0; i < methodParameters.Length; i++)
+                {
+                    parameters[i] = _parsingHelper.Parse(methodParameters[i].ParameterType, inputParameters[i]);
+                }
+                
+                return method.Invoke(this, parameters) as string;
             }
 
             return Help();
